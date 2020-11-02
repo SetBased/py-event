@@ -110,7 +110,7 @@ class EventDispatcher:
         return len(self.__queue)
 
     # ------------------------------------------------------------------------------------------------------------------
-    def loop(self) -> None:
+    def loop(self) -> bool:
         """
         Start the event handler loop.
 
@@ -118,23 +118,32 @@ class EventDispatcher:
         * The event handler for 'event_queue_empty' completes without adding new events on the event queue.
         * Property exit has been set to True and the event queue is empty. Note: after property exit has been set to
           True event 'event_queue_empty' will not be triggered.
+
+        Returns True if all events have dispatched. Returns False if the dispatcher is dispatching event already.
         """
-        self.__dispatch_event(self.__event_loop_start, None)
+        if not self.__is_running:
+            self.__is_running = True
 
-        if not self.exit and not self.__queue:
-            self.__dispatch_event(self.__event_queue_empty, None)
+            self.__dispatch_event(self.__event_loop_start, None)
 
-        while self.__queue:
-            event, event_data = self.__queue.pop(0)
-
-            self.__dispatch_event(event, event_data)
-
-            if not self.__queue and not self.exit:
+            if not self.exit and not self.__queue:
                 self.__dispatch_event(self.__event_queue_empty, None)
-                if not self.__queue:
-                    self.exit = True
 
-        self.__dispatch_event(self.__event_loop_end, None)
+            while self.__queue:
+                event, event_data = self.__queue.pop(0)
+
+                self.__dispatch_event(event, event_data)
+
+                if not self.__queue and not self.exit:
+                    self.__dispatch_event(self.__event_queue_empty, None)
+                    if not self.__queue:
+                        self.exit = True
+
+            self.__dispatch_event(self.__event_loop_end, None)
+
+            self.__is_running = False
+
+        return not self.__is_running
 
     # ------------------------------------------------------------------------------------------------------------------
     def __dispatch_event(self, event: Event, event_data: Any) -> None:
