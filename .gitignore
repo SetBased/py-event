@@ -1,0 +1,10 @@
+/.coverage
+/.idea/
+/bin/
+/composer.lock
+/dist
+/py_event.egg-info/
+/test/html/
+/vendor/
+/venv/
+__pycache__
