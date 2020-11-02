@@ -1,45 +1,44 @@
+import gc
 import unittest
 from io import StringIO
 
-import gc
-
 from py_event.Event import Event
-from py_event.EventActor import EventActor
-from py_event.EventController import EventController
+from py_event.EventDispatcher import EventDispatcher
 
 
-class EventControllerTest(unittest.TestCase):
+class EventDispatcherTest(unittest.TestCase):
     """
-    Test cases for EventControllerTest.
+    Test cases for EventDispatcherTest.
     """
+    # ------------------------------------------------------------------------------------------------------------------
+    def tearDown(self):
+        dispatcher = EventDispatcher.instance()
+        dispatcher.__del__()
 
     # ------------------------------------------------------------------------------------------------------------------
     def test_run_to_completion(self):
         """
         Test each event is processed completely before any other event is processed. And test events are processed in
-        the order they are fired.
+        the order they are triggered.
         """
         out = StringIO()
 
-        controller = EventController()
+        dispatcher = EventDispatcher.instance()
 
-        class Spam(EventActor):
+        class Spam:
             def __init__(self, message):
-                EventActor.__init__(self)
-
                 self.message = message
                 self.event = Event(self)
 
-        class Eggs(EventActor):
+        class Eggs:
             def __init__(self, spam):
-                EventActor.__init__(self)
                 self.spam = spam
 
             def handle_event(self, event, again, *_):
                 if again:
-                    self.spam.event.fire(False)
+                    self.spam.event.trigger(False)
 
-                out.write('Processing: ' + event.source.message + ' ' + str(again))
+                out.write('Processing: ' + event.emitter.message + ' ' + str(again))
                 out.write('\n')
 
         # Create object for firing events.
@@ -48,7 +47,7 @@ class EventControllerTest(unittest.TestCase):
         spam3 = Spam('spam3')
         spam4 = Spam('spam4')
 
-        # Create objects for handling events. During handling they fire the event again.
+        # Create objects for handling events. During handling they trigger the event again.
         eggs1 = Eggs(spam1)
         eggs2 = Eggs(spam2)
         eggs3 = Eggs(spam3)
@@ -60,14 +59,14 @@ class EventControllerTest(unittest.TestCase):
         spam3.event.register_listener(eggs3.handle_event)
         spam4.event.register_listener(eggs4.handle_event)
 
-        # Fire some events before the event loop.
-        spam1.event.fire(True)
-        spam2.event.fire(True)
-        spam3.event.fire(True)
-        spam4.event.fire(True)
+        # Trigger some events before the event loop.
+        spam1.event.trigger(True)
+        spam2.event.trigger(True)
+        spam3.event.trigger(True)
+        spam4.event.trigger(True)
 
         # Start the event loop.
-        controller.loop()
+        dispatcher.loop()
 
         actual = out.getvalue()
 
@@ -91,12 +90,10 @@ Processing: spam4 False
         """
         out = StringIO()
 
-        controller = EventController()
+        dispatcher = EventDispatcher.instance()
 
-        class Spam(EventActor):
+        class Spam:
             def __init__(self, name):
-                EventActor.__init__(self)
-
                 self.name = name
                 self.event = Event(self)
 
@@ -120,13 +117,13 @@ Processing: spam4 False
         # And a self loop.
         spam1.event.register_listener(spam1.handle_event)
 
-        # Fire some events before the event loop.
-        spam1.event.fire(True)
-        spam2.event.fire(True)
-        spam3.event.fire(True)
+        # Trigger some events before the event loop.
+        spam1.event.trigger(True)
+        spam2.event.trigger(True)
+        spam3.event.trigger(True)
 
         # Start the event loop.
-        controller.loop()
+        dispatcher.loop()
 
         # Remove the objects (actually the variables).
         del spam1
@@ -149,12 +146,10 @@ Processing: spam4 False
         """
         out = StringIO()
 
-        controller = EventController()
+        dispatcher = EventDispatcher.instance()
 
-        class Spam(EventActor):
+        class Spam:
             def __init__(self, name):
-                EventActor.__init__(self)
-
                 self.name = name
                 self.event = Event(self)
 
@@ -178,13 +173,13 @@ Processing: spam4 False
         # And a self loop.
         spam1.event.register_listener(spam1.handle_event)
 
-        # Fire some events before the event loop.
-        spam1.event.fire(True)
-        spam2.event.fire(True)
-        spam3.event.fire(True)
+        # Trigger some events before the event loop.
+        spam1.event.trigger(True)
+        spam2.event.trigger(True)
+        spam3.event.trigger(True)
 
         # Start the event loop.
-        controller.loop()
+        dispatcher.loop()
 
         # Remove the objects (actually the variables).
         del spam1
@@ -211,17 +206,15 @@ Deleting spam3
         """
         out = StringIO()
 
-        controller = EventController()
+        dispatcher = EventDispatcher.instance()
 
-        class Spam(EventActor):
+        class Spam:
             def __init__(self, name):
-                EventActor.__init__(self)
-
                 self.name = name
                 self.event = Event(self)
 
             def handle_event(self, event, event_data, listener_data):
-                out.write(event.source.name + ' ' + event_data + ' ' + listener_data)
+                out.write(event.emitter.name + ' ' + event_data + ' ' + listener_data)
                 out.write('\n')
 
         # Create objects for firing events.
@@ -232,11 +225,11 @@ Deleting spam3
         spam1.event.register_listener(spam2.handle_event, 'spam')
         spam1.event.register_listener(spam2.handle_event, 'eggs')
 
-        # Fire some events before the event loop.
-        spam1.event.fire('event 1')
+        # Trigger some events before the event loop.
+        spam1.event.trigger('event 1')
 
         # Start the event loop.
-        controller.loop()
+        dispatcher.loop()
 
         actual = out.getvalue()
 
@@ -254,20 +247,18 @@ spam1 event 1 eggs
         """
         out = StringIO()
 
-        controller = EventController()
+        dispatcher = EventDispatcher.instance()
 
-        class Spam(EventActor):
+        class Spam:
             def __init__(self, n):
-                EventActor.__init__(self)
                 self.n = n
-
                 self.event = Event(self)
 
             def handle_event(self, *_):
                 if self.n:
                     out.write(str(self.n))
                     out.write('\n')
-                    self.event.fire()
+                    self.event.trigger()
                     self.n -= 1
                 else:
                     out.write('Ignition ...')
@@ -276,10 +267,10 @@ spam1 event 1 eggs
         spam = Spam(10)
 
         # Register event listener
-        controller.event_queue_empty.register_listener(spam.handle_event)
+        dispatcher.event_queue_empty.register_listener(spam.handle_event)
 
         # Start the event loop.
-        controller.loop()
+        dispatcher.loop()
 
         actual = out.getvalue()
 
@@ -306,9 +297,9 @@ Ignition ...
         """
         out = StringIO()
 
-        controller = EventController()
+        dispatcher = EventDispatcher.instance()
 
-        class Spam(EventActor):
+        class Spam:
             def handle_event(self, even, event_data, listener_data):
                 out.write(listener_data)
                 out.write('\n')
@@ -317,12 +308,12 @@ Ignition ...
         spam = Spam()
 
         # Register event listener
-        controller.event_loop_start.register_listener(spam.handle_event, 'event_loop_start')
-        controller.event_loop_end.register_listener(spam.handle_event, 'event_loop_end')
-        controller.event_queue_empty.register_listener(spam.handle_event, 'event_queue_empty')
+        dispatcher.event_loop_start.register_listener(spam.handle_event, 'event_loop_start')
+        dispatcher.event_loop_end.register_listener(spam.handle_event, 'event_loop_end')
+        dispatcher.event_queue_empty.register_listener(spam.handle_event, 'event_queue_empty')
 
         # Start the event loop.
-        controller.loop()
+        dispatcher.loop()
 
         actual = out.getvalue()
 
@@ -341,12 +332,10 @@ event_loop_end
             """
             out = StringIO()
 
-            controller = EventController()
+            dispatcher = EventDispatcher.instance()
 
-            class Spam(EventActor):
+            class Spam:
                 def __init__(self):
-                    EventActor.__init__(self)
-
                     self.event = Event(self)
 
                 def handle_event(self, even, event_data, listener_data):
@@ -357,16 +346,16 @@ event_loop_end
             spam = Spam()
 
             # Register event listener
-            controller.event_loop_start.register_listener(spam.handle_event, 'event_loop_start')
-            controller.event_loop_end.register_listener(spam.handle_event, 'event_loop_end')
-            controller.event_queue_empty.register_listener(spam.handle_event, 'event_queue_empty')
+            dispatcher.event_loop_start.register_listener(spam.handle_event, 'event_loop_start')
+            dispatcher.event_loop_end.register_listener(spam.handle_event, 'event_loop_end')
+            dispatcher.event_queue_empty.register_listener(spam.handle_event, 'event_queue_empty')
             spam.event.register_listener(spam.handle_event, 'spam')
 
-            # Fire an event.
-            spam.event.fire()
+            # Trigger an event.
+            spam.event.trigger()
 
             # Start the event loop.
-            controller.loop()
+            dispatcher.loop()
 
             actual = out.getvalue()
 
@@ -384,12 +373,10 @@ event_loop_end
         """
         Test destroying an event 2 times has no side effects.
         """
-        controller = EventController()
+        dispatcher = EventDispatcher.instance()
 
-        class Spam(EventActor):
+        class Spam:
             def __init__(self):
-                EventActor.__init__(self)
-
                 self.event = Event(self)
 
             def handle_event(self, *_):
@@ -402,7 +389,7 @@ event_loop_end
         spam.event.register_listener(spam.handle_event)
 
         # Start the event loop.
-        controller.loop()
+        dispatcher.loop()
 
         gc.collect()
 

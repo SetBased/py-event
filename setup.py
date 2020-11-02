@@ -13,7 +13,7 @@ setup(
 
         version='0.0.0',
 
-        description='A single threaded and a run-to-completion event controller',
+        description='A single threaded and a run-to-completion event system',
         long_description=long_description,
 
         url='https://github.com/SetBased/py-event',
