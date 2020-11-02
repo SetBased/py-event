@@ -10,4 +10,5 @@ install:
   - pip3 install -r requirements.txt
 
 script:
+  - cd $TRAVIS_BUILD_DIR
   - python3 -m unittest test/*.py
